@@ -4,11 +4,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import timepai
+import time
 
 
 def obter_resposta_com_xpath(driver, xpaths=None):
-    """Tenta retornar o texto da última resposta usando uma lista de XPaths."""
+    """Retorna o texto da última resposta, tentando vários XPaths."""
     if xpaths is None:
         xpaths = [
             "(//div[@data-message-author-role='assistant'])[last()]",
@@ -17,8 +17,8 @@ def obter_resposta_com_xpath(driver, xpaths=None):
 
     for xpath in xpaths:
         try:
-            elemento = WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((By.XPATH, xpath))
+            elemento = WebDriverWait(driver, 20).until(
+                EC.visibility_of_element_located((By.XPATH, xpath))
             )
             texto = elemento.text.strip()
             if texto:
@@ -39,7 +39,7 @@ def enviar_mensagem(driver, mensagem, seletores=None):
 
     for seletor in seletores:
         try:
-            campo = WebDriverWait(driver, 5).until(
+            campo = WebDriverWait(driver, 20).until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, seletor))
             )
             campo.clear()
@@ -51,52 +51,39 @@ def enviar_mensagem(driver, mensagem, seletores=None):
     raise TimeoutException("Campo de mensagem não encontrado")
 
 # Inicializar o Chrome (Selenium 4.x)
-driver = webdriver.Chrome()
-mensagem_inicial = "Olá! Vamos começar a conversa?"
-mensagem_inicial = "Olá! Vamos começar a conversa?"
 
-# Abre ChatGPT e Gemini em abas separadas
-driver.get("https://chat.openai.com/")
-driver.execute_script("window.open('https://gemini.google.com/', '_blank');")
-time.sleep(5)
+def main():
+    driver = webdriver.Chrome()
 
-abas = driver.window_handles
+    # Abrir ChatGPT em duas abas separadas
+    # É necessário estar logado previamente para que o envio funcione.
+    driver.get("https://chat.openai.com/")              # Primeira aba do ChatGPT
+    driver.execute_script("window.open('https://chat.openai.com/', '_blank');")
+    time.sleep(5)                                       # Aguarda o carregamento
 
-for i in range(5):
-    if i == 0:
-        # Envia a primeira mensagem para o ChatGPT
-        driver.switch_to.window(abas[0])
-        enviar_mensagem(driver, mensagem_inicial)
-    else:
-        # Continua a sequência normal de troca entre as IAs
-        driver.switch_to.window(abas[0])
+    abas = driver.window_handles
+
+    for _ in range(5):
+        # --- Obter resposta do ChatGPT ---
+        driver.switch_to.window(abas[0])                # Abre aba do ChatGPT
         resposta = obter_resposta_com_xpath(driver)
-        driver.switch_to.window(abas[1])
+
+        # --- Enviar a resposta para a segunda aba ---
+        driver.switch_to.window(abas[1])                # Abre segunda aba
         enviar_mensagem(driver, resposta)
 
+
+        # --- Pegar a réplica da segunda aba ---
         resposta = obter_resposta_com_xpath(driver)
+
+
+        # --- Enviar para o ChatGPT novamente ---
         driver.switch_to.window(abas[0])
         enviar_mensagem(driver, resposta)
 
-# Abrir ChatGPT e Gemini em abas separadas
-driver.get("https://chat.openai.com/")              # ChatGPT
-driver.execute_script("window.open('https://gemini.google.com/', '_blank');")
-time.sleep(5)                                       # Aguarda o carregamento
 
-abas = driver.window_handles
+    driver.quit()
 
-for i in range(5):  # Exemplo de 5 interações
-    # --- Obter resposta do ChatGPT ---
-    driver.switch_to.window(abas[0])                # Abre aba do ChatGPT
-    resposta = obter_resposta_com_xpath(driver)     # Função que lê o texto
-
-    # --- Enviar a resposta para o Gemini ---
-    driver.switch_to.window(abas[1])                # Abre aba do Gemini
-    enviar_mensagem(driver, resposta)               # Função que escreve e envia
-
-    # --- Pegar a réplica do Gemini ---
-    resposta = obter_resposta_com_xpath(driver)
-
-    # --- Enviar para o ChatGPT novamente ---
-    driver.switch_to.window(abas[0])
     enviar_mensagem(driver, resposta)
+if __name__ == "__main__":
+    main()
