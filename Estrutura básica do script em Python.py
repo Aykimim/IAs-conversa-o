@@ -4,7 +4,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-import time
+import timepai
 
 
 def obter_resposta_com_xpath(driver, xpaths=None):
@@ -52,6 +52,31 @@ def enviar_mensagem(driver, mensagem, seletores=None):
 
 # Inicializar o Chrome (Selenium 4.x)
 driver = webdriver.Chrome()
+mensagem_inicial = "Olá! Vamos começar a conversa?"
+mensagem_inicial = "Olá! Vamos começar a conversa?"
+
+# Abre ChatGPT e Gemini em abas separadas
+driver.get("https://chat.openai.com/")
+driver.execute_script("window.open('https://gemini.google.com/', '_blank');")
+time.sleep(5)
+
+abas = driver.window_handles
+
+for i in range(5):
+    if i == 0:
+        # Envia a primeira mensagem para o ChatGPT
+        driver.switch_to.window(abas[0])
+        enviar_mensagem(driver, mensagem_inicial)
+    else:
+        # Continua a sequência normal de troca entre as IAs
+        driver.switch_to.window(abas[0])
+        resposta = obter_resposta_com_xpath(driver)
+        driver.switch_to.window(abas[1])
+        enviar_mensagem(driver, resposta)
+
+        resposta = obter_resposta_com_xpath(driver)
+        driver.switch_to.window(abas[0])
+        enviar_mensagem(driver, resposta)
 
 # Abrir ChatGPT e Gemini em abas separadas
 driver.get("https://chat.openai.com/")              # ChatGPT
